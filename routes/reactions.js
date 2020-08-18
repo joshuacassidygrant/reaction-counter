@@ -11,7 +11,7 @@ const bolt = new App({
 router.get('/:emoji', function(req, res, next) {
   getReactionsOfEmojiByPostAuthor(req.params.emoji)
   .then((val) => {
-    res.send(val);
+    res.status(200).send(val);
   })
   .catch((err) => {
     console.error(err);

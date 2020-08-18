@@ -9,8 +9,6 @@ const reactionsRouter = require('./routes/reactions');
 
 const app = express();
 
-console.log(process.env.TEST);
-
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

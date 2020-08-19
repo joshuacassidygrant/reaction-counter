@@ -9,7 +9,7 @@ const bolt = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
-const MESSAGE_RESULTS_PER_PAGE = 200; // Slack hard limits history to 1000 messages per call
+const MESSAGE_RESULTS_PER_PAGE = 200; // Slack hard limits history to 1000 messages per call, recommends 200
 
 router.get('/:emoji', function(req, res, next) {
   //res.status(200).send("Received");
@@ -93,69 +93,7 @@ async function fetchHistory(id) {
     let promiseList = [];
 
     for (let channel of channelResults.channels) {
-
       promiseList.push(fetchPageRecursive(channel.id, null, mainMessageList));
-
-      /* This function will grab "next_cursor" and put a request for that page of the 
-       * results in the promise list until it reaches a page with less than maximum results.
-       * It will also check all messages for replies and put those on the promise pile too.
-       * The channel variable above is used in the below closure.
-       */
-
-      /*let sendPagingRequest = () => {
-        return bolt.client.conversations.history({
-          token: process.env.SLACK_BOT_TOKEN,
-          channel: channel.id,
-          limit: MESSAGE_RESULTS_PER_PAGE
-        })
-        .then((history) => {
-          if (history.response_metadata.next_cursor) {
-            // Returned page is full; we add a request to the promise list for the next one too
-            console.log("push more");
-            promiseList.push(bolt.client.conversations.history({
-              token: process.env.SLACK_BOT_TOKEN,
-              channel: channel.id,
-              limit: MESSAGE_RESULTS_PER_PAGE,
-              cursor: history.response_metadata.next_cursor
-            }))
-          }*/
-
-          /*for (let message of history.messages) {
-            if (message.reply_count > 0) {
-
-              let sendRepliesRequest = () => {
-                return bolt.client.conversations.replies({
-                  token: process.env.SLACK_BOT_TOKEN,
-                  channel: channel.id,
-                  ts: message.ts,
-                  limit: MESSAGE_RESULTS_PER_PAGE
-                })
-                .then((replies) => {
-                  //TODO: Remove the original message from replies. We have already handled this.
-                  return replies.messages;
-                })
-                .catch ((err) => {
-                  console.error(err);
-                })
-              }
-
-              promiseList.push(sendRepliesRequest);
-            }
-          }*/
-
-          // Resolve this promise with the history
-         /* return history.messages;
-        })
-        .catch((err) => {
-          console.error(err);
-        })
-      }
-
-      if (channel.is_member) {
-        promiseList.push(sendPagingRequest());
-      } else {
-        console.log(`Not a member of channel {channel.id}`);
-      }*/
     }
 
     return Promise.all(promiseList);
@@ -163,13 +101,13 @@ async function fetchHistory(id) {
   .then(() => {
     let replyPromises = [];
 
-    console.log(JSON.stringify(mainMessageList, undefined, 4));
     // Get replies
     for (let message of mainMessageList) {
-
+      // as above, but we are now going to fetch the replies of every item and place them in completeMessageList
       if (message.reply_count > 0) {
         replyPromises.push(fetchRepliesRecursive(message.channel_id, message.ts, null, completeMessageList));
       } else {
+        // if no replies, we can just put the message itself in completeMessageList
         completeMessageList.push(message);
       }
     }
@@ -177,6 +115,7 @@ async function fetchHistory(id) {
     return Promise.all(replyPromises);
   })
   .then(() => {
+    // Complete messageList is finished and ready for processing!
     return completeMessageList;
   })
   .catch ((err) => {
@@ -185,7 +124,6 @@ async function fetchHistory(id) {
 }
 
 function fetchPageRecursive(channel_id, next, messageArray) {
-
   return bolt.client.conversations.history({
     token: process.env.SLACK_BOT_TOKEN,
     channel: channel_id,
@@ -201,6 +139,7 @@ function fetchPageRecursive(channel_id, next, messageArray) {
 
     messageArray.push(...messages);
     if (results.response_metadata.next_cursor) {
+      // If there are more than MESSAGE_RESULTS_PER_PAGE, we can page using this
       return fetchPageRecursive(channel_id, results.response_metadata.next_cursor, messageArray);
     } else {
       return null;
@@ -222,6 +161,7 @@ function fetchRepliesRecursive(channel_id, timestamp, next, messageArray) {
   .then((results) => {
     messageArray.push(...results.messages);
     if (results.response_metadata.next_cursor) {
+      // If there are more than MESSAGE_RESULTS_PER_PAGE, we can page using this
       return fetchRepliesRecursive(channel_id, timestamp, results.response_metadata.next_cursor, messageArray);
     } else {
       return null;

@@ -2,13 +2,17 @@ const express = require('express');
 const router = express.Router();
 const {App} = require('@slack/bolt'); 
 const e = require('express');
+const { json } = require('express');
 
 const bolt = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET
-})
+});
+
+const MESSAGE_RESULTS_PER_PAGE = 500; // Slack hard limits history to 1000 messages per call
 
 router.get('/:emoji', function(req, res, next) {
+  //res.status(200).send("Received");
   getReactionsOfEmojiByPostAuthor(req.params.emoji)
   .then((val) => {
     res.status(200).send(val);
@@ -87,18 +91,77 @@ async function fetchHistory(id) {
     let promiseList = [];
 
     for (let channel of channelResults.channels) {
-      promiseList.push(bolt.client.conversations.history({
-        token: process.env.SLACK_BOT_TOKEN,
-        channel: channel.id
-      }));
+
+      /* This function will grab "next_cursor" and put a request for that page of the 
+       * results in the promise list until it reaches a page with less than maximum results.
+       * It will also check all messages for replies and put those on the promise pile too.
+       * The channel variable above is used in the below closure.
+       */
+
+      let sendPagingRequest = () => {
+        return bolt.client.conversations.history({
+          token: process.env.SLACK_BOT_TOKEN,
+          channel: channel.id,
+          limit: MESSAGE_RESULTS_PER_PAGE
+        })
+        .then((history) => {
+          if (history.response_metadata.next_cursor) {
+            // Returned page is full; we add a request to the promise list for the next one too
+            console.log("push more");
+            promiseList.push(bolt.client.conversations.history({
+              token: process.env.SLACK_BOT_TOKEN,
+              channel: channel.id,
+              limit: MESSAGE_RESULTS_PER_PAGE,
+              cursor: history.response_metadata.next_cursor
+            }))
+          }
+
+          /*for (let message of history.messages) {
+            if (message.reply_count > 0) {
+
+              let sendRepliesRequest = () => {
+                return bolt.client.conversations.replies({
+                  token: process.env.SLACK_BOT_TOKEN,
+                  channel: channel.id,
+                  ts: message.ts,
+                  limit: MESSAGE_RESULTS_PER_PAGE
+                })
+                .then((replies) => {
+                  //TODO: Remove the original message from replies. We have already handled this.
+                  return replies.messages;
+                })
+                .catch ((err) => {
+                  console.error(err);
+                })
+              }
+
+              promiseList.push(sendRepliesRequest);
+            }
+          }*/
+
+          // Resolve this promise with the history
+          return history.messages;
+        })
+        .catch((err) => {
+          console.error(err);
+        })
+      }
+
+      if (channel.is_member) {
+        promiseList.push(sendPagingRequest());
+      } else {
+        console.log(`Not a member of channel {channel.id}`);
+      }
     }
 
     return Promise.all(promiseList);
   })
-  .then((histories) => {
+  .then((channelsMessages) => {
+    console.log(channelsMessages.length);
     messages = [];
-    for (let history of histories) {
-      messages.push(...history.messages)
+    for (let channelMessages of channelsMessages) {
+      console.log(channelMessages.length);
+      messages.push(...channelMessages)
     }
     return messages;
   })

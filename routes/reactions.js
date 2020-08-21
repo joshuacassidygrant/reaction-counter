@@ -12,7 +12,7 @@ router.get('/:emoji', function(req, res, next) {
   .then((val) => {
     // TODO: this is clearly not the best way to get information, but the file can be huge and take forever, so it was difficult to respond to a GET request with it.
     jsonWriter.writeFile("count-" + req.params.emoji, val); 
-    res.status(200).send(val);
+    console.log("Finished. File generated.");
   })
   .catch((err) => {
     console.error(err);

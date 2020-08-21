@@ -11,8 +11,8 @@ if (emoji == undefined) {
 console.log(`Counting ${emoji} for all channels the auth'd bot is invited to`);
 
 getReactionsOfEmojiByPostAuthor(emoji)
-.then(() => {
-    jsonWriter.writeFile("count-" + req.params.emoji, val); 
+.then((val) => {
+    jsonWriter.writeFile("count-" + emoji, val); 
     console.log("Success. The file is in the folder.");
 })
 .catch((err) => {

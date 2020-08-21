@@ -5,7 +5,7 @@ This script counts the reactions to posts in a Slack group and attributes them t
 
 ## SETUP
 1. In https://api.slack.com/apps/ create an app.
-2. Give it oAuth scope for the following: channels:history, channels:join, channels:read, commands, groups:history, groups:read, im:history, im:read, incoming-webhook, mpim:history, mpim:read, reactions:read, users: read
+2. Give it user and bot token oAuth scope for the following: channels:history, channels:join, channels:read, commands, groups:history, groups:read, im:history, im:read, incoming-webhook, mpim:history, mpim:read, reactions:read, users: read
 3. Set up an oAuth token and a signing secret (from Basic Information) and include that in a .env file for SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET in the root of the project (see example file).
 4. Set up a bot user from App Home.
 5. The bot should now show up in your Slack group. Invite it to all channels you with to count by @ing it.

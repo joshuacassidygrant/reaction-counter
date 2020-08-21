@@ -1,7 +1,9 @@
-# reaction-counter
+# reaction-counter (for Slack)
 
 This script counts the reactions to posts in a Slack group and attributes them to the original author of the reacted post, aggregating a score for all chat-users-who-get-reacted-to.
 
+
+I created this for an online class that was using reaction metrics to mark participation; feel free to use it for anything non-evil.
 
 ## SETUP
 1. In https://api.slack.com/apps/ create an app.
